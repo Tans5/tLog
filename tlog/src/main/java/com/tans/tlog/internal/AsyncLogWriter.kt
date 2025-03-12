@@ -56,7 +56,7 @@ internal class AsyncLogWriter(
                     appVersion = 1,
                     valueCount = 1,
                     maxSize = this.maxSize,
-                    deleteDirtyFile = false
+                    isAppendMode = true
                 )
                 this.writerState = WriterState.InitSuccess
                 LibLog.d(TAG, "Init success.")

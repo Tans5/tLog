@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.max
 
 
 private val sdfDateTimeMsThreadLocal: ThreadLocal<SimpleDateFormat> by lazy {
@@ -83,5 +84,13 @@ internal fun Throwable.convertToStrings(): List<String> {
     val outputStream = ByteArrayOutputStream(64)
     val printStream = PrintStream(outputStream, true, "UTF-8")
     printStackTrace(printStream)
-    return String(outputStream.toByteArray(), Charsets.UTF_8).lines().filter { it.isNotBlank() }
+    val s = String(outputStream.toByteArray(), Charsets.UTF_8)
+    val lines = s.lines().let {
+        if (it.lastOrNull().isNullOrEmpty()) {
+            it.take(max( it.size - 1, 0))
+        } else {
+            it
+        }
+    }
+    return lines
 }
