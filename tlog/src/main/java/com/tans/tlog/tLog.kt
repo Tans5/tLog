@@ -54,11 +54,14 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
 
 
             fun build(): tLog {
-                return tLog(asyncLogWriter = AsyncLogWriter(
-                    baseDir = baseDir,
-                    maxSize = maxSize,
-                    backgroundExecutor =  Executor(backgroundThread)
-                ))
+                return tLog(
+                    asyncLogWriter = AsyncLogWriter(
+                        baseDir = baseDir,
+                        maxSize = maxSize,
+                        logFilterLevel = logFilterLevel,
+                        backgroundExecutor = Executor(backgroundThread)
+                    )
+                )
             }
         }
     }
