@@ -15,7 +15,7 @@ class MyApplication : Application() {
 
             while (true) {
                 AppLog.d("DebugTest", "DebugTest: ${System.currentTimeMillis()}")
-                Thread.sleep(2000L)
+                Thread.sleep(1000L)
             }
         }, "DebugTestThread").start()
 

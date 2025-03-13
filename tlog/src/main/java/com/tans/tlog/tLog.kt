@@ -5,6 +5,7 @@ import android.util.Log
 import com.tans.tlog.internal.AsyncLogWriter
 import com.tans.tlog.internal.Executor
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 @Suppress("ClassName")
 class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
@@ -67,8 +68,15 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
     }
 
     companion object {
+        private val usedBaseDir: ConcurrentHashMap<String, Unit> = ConcurrentHashMap()
 
         class Builder(private val baseDir: File) {
+
+            init {
+                if (usedBaseDir.putIfAbsent(baseDir.canonicalPath, Unit) != null) {
+                    error("$baseDir was already taken.")
+                }
+            }
 
             private var maxSize: Long? = null
 

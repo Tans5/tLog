@@ -2,6 +2,7 @@ package com.tans.tlog.demo
 
 import android.app.Application
 import com.tans.tlog.InitCallback
+import com.tans.tlog.LogLevel
 import com.tans.tlog.tLog
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
