@@ -78,6 +78,8 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
 
             private var initCallback: InitCallback? = null
 
+            private var logToBytesConverter: LogToBytesConverter? = null
+
             fun setMaxSize(maxSize: Long): Builder {
                 assert(maxSize > 0L) { "Max size must greater than 0" }
                 this.maxSize = maxSize
@@ -99,6 +101,11 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
                 return this
             }
 
+            fun setLogToBytesConverter(converter: LogToBytesConverter): Builder {
+                this.logToBytesConverter = converter
+                return this
+            }
+
             fun build(): tLog {
                 return tLog(
                     asyncLogWriter = AsyncLogWriter(
@@ -106,7 +113,8 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
                         maxSize = maxSize,
                         logFilterLevel = logFilterLevel,
                         backgroundExecutor = Executor(backgroundThread),
-                        initCallback = initCallback
+                        initCallback = initCallback,
+                        logToBytesConverter = logToBytesConverter
                     )
                 )
             }

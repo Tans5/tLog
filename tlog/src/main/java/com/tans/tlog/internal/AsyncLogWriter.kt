@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Message
 import com.tans.tlog.InitCallback
 import com.tans.tlog.LogLevel
+import com.tans.tlog.LogToBytesConverter
 import com.tans.tlrucache.disk.DiskLruCache
 import java.io.File
 import java.io.RandomAccessFile
@@ -16,10 +17,13 @@ internal class AsyncLogWriter(
     maxSize: Long?,
     private val logFilterLevel: LogLevel,
     private val backgroundExecutor: Executor,
-    private val initCallback: InitCallback?
+    private val initCallback: InitCallback?,
+    logToBytesConverter: LogToBytesConverter?
 ) {
 
     private val maxSize: Long = maxSize ?: DEFAULT_MAX_SIZE
+
+    private val logToBytesConverter: LogToBytesConverter = logToBytesConverter ?: DefaultLogToBytesConverter
 
     @Volatile
     private var  writerState: WriterState = WriterState.Initializing
@@ -200,7 +204,7 @@ internal class AsyncLogWriter(
                         if (l == null) {
                             break
                         } else {
-                            bytes.add(l.toByteArray(Charsets.UTF_8).apply { bytesSize += size })
+                            bytes.add(logToBytesConverter.convert(l).apply { bytesSize += size })
                         }
                     }
                     if (bytesSize > 0) {
@@ -272,7 +276,7 @@ internal class AsyncLogWriter(
         // 128 KB
         private const val FRAGMENT_TO_COMMIT_SIZE = 1024L * 128L
 
-        private const val MAX_WAITING_QUEUE_SIZE = 2000
+        private const val MAX_WAITING_QUEUE_SIZE = 500
 
         private const val TAG = "AsyncLogWriter"
 
@@ -280,6 +284,12 @@ internal class AsyncLogWriter(
             Initializing,
             InitSuccess,
             InitFail
+        }
+
+        private object DefaultLogToBytesConverter : LogToBytesConverter {
+            override fun convert(log: String): ByteArray {
+                return log.toByteArray(Charsets.UTF_8)
+            }
         }
     }
 }

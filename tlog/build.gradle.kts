@@ -44,7 +44,7 @@ android {
 }
 
 dependencies {
-    api(libs.tilrucache)
+    api(libs.tlrucache)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

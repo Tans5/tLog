@@ -7,13 +7,28 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <TextView
+    <Button
+        android:id="@+id/flush_log_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:text="FlushLog"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/delete_log_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DeleteLog"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/flush_log_bt" />
+
+    <Button
+        android:id="@+id/zip_log_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ZipLog"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/delete_log_bt"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

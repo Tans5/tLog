@@ -33,6 +33,11 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    buildFeatures {
+        viewBinding {
+            enable = true
+        }
+    }
 }
 
 dependencies {
@@ -42,6 +47,10 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.coroutines.core)
+    implementation(libs.coroutines.core.jvm)
+    implementation(libs.coroutines.android)
+    implementation(libs.tuiutils)
     implementation(project(":tlog"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

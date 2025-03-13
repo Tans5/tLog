@@ -10,7 +10,11 @@ object AppLog {
 
     private val log: AtomicReference<tLog?> = AtomicReference(null)
 
+    @Volatile
+    private var application: Application? = null
+
     fun init(application: Application) {
+        this.application = application
         val l = tLog.Companion.Builder(File(application.externalCacheDir, "AppLog"))
             .setInitCallback(object : InitCallback {
                 override fun onSuccess() {
@@ -31,6 +35,18 @@ object AppLog {
 
     fun e(tag: String, msg: String, t: Throwable? = null) {
         log.get()?.e(tag, msg, t)
+    }
+
+    fun flushLogs() {
+        log.get()?.flush()
+    }
+
+    fun deleteAllLogs() {
+        log.get()?.deleteAllLogs()
+    }
+
+    fun zipLogs() {
+        log.get()?.zipLogFile(File(application!!.externalCacheDir, "logs.zip"))
     }
 
     const val TAG = "AppLog"
