@@ -6,8 +6,9 @@ import com.tans.tlog.InitCallback
 import com.tans.tlog.LogLevel
 import com.tans.tlrucache.disk.DiskLruCache
 import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
+import java.io.RandomAccessFile
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel.MapMode
 import java.util.concurrent.LinkedBlockingQueue
 
 internal class AsyncLogWriter(
@@ -37,9 +38,13 @@ internal class AsyncLogWriter(
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     WRITE_LOG_MSG -> {
-                        writeWaitingLogs()
-                        handler.removeMessages(COMMIT_LOG_MSG)
-                        handler.sendEmptyMessageDelayed(COMMIT_LOG_MSG, TIMEOUT_COMMIT_LOG_INTERVAL)
+                        val fragmentSize = writeWaitingLogs()
+                        if (fragmentSize > FRAGMENT_TO_COMMIT_SIZE) {
+                            commitLogs()
+                        } else {
+                            handler.removeMessages(COMMIT_LOG_MSG)
+                            handler.sendEmptyMessageDelayed(COMMIT_LOG_MSG, TIMEOUT_COMMIT_LOG_INTERVAL)
+                        }
                     }
 
                     COMMIT_LOG_MSG -> {
@@ -163,54 +168,70 @@ internal class AsyncLogWriter(
 
     private var editor: DiskLruCache.Editor? = null
 
-    private var writer: OutputStreamWriter? = null
+    private var lastWriteBuffer: MappedByteBuffer? = null
 
-    private fun writeWaitingLogs() {
-        synchronized(writeLock) {
+    private var writingFile: RandomAccessFile? = null
+
+    private fun writeWaitingLogs(): Long {
+        return synchronized(writeLock) {
             val diskLruCache = this@AsyncLogWriter.diskLruCache
             if (waitingWriteLogs.isNotEmpty() && diskLruCache != null) {
                 var editor = this.editor
-                var writer = this.writer
+                var writingFile = this.writingFile
                 try {
-                    if (editor == null || writer == null) {
-                        writer?.close()
+                    if (editor == null || writingFile == null) {
+                        writingFile?.close()
                         editor?.commit()
-                        this.writer = null
-                        this.editor = null
 
                         val key = getCacheKey()
-                        editor = diskLruCache.edit(key)
-                        if (editor == null) {
-                            LibLog.e(TAG, "Can't get editor for key: $key")
-                        } else {
-                            this.editor = editor
-                            val f = editor.getFile(0)
-                            if (!f.exists()) {
-                                f.createNewFile()
-                            }
-                            writer = FileOutputStream(f, true).writer(Charsets.UTF_8)
-                            this.writer = writer
+                        editor = diskLruCache.edit(key) ?: error("Can't get editor for key: $key")
+                        this.editor = editor
+                        val f = editor.getFile(0)
+                        if (!f.exists()) {
+                            f.createNewFile()
                         }
+                        writingFile = RandomAccessFile(f, "rw")
+                        this.writingFile = writingFile
                     }
+                    val bytes = ArrayList<ByteArray>()
+                    var bytesSize = 0
                     while (waitingWriteLogs.isNotEmpty()) {
                         val l = waitingWriteLogs.poll()
                         if (l == null) {
                             break
                         } else {
-                            writer?.write(l)
+                            bytes.add(l.toByteArray(Charsets.UTF_8).apply { bytesSize += size })
                         }
+                    }
+                    if (bytesSize > 0) {
+                        val oldLength = writingFile.length()
+                        val newLength = bytesSize + oldLength
+                        writingFile.setLength(newLength)
+                        this.lastWriteBuffer?.force()
+                        this.lastWriteBuffer = null
+                        val writeBuffer = writingFile.channel.map(MapMode.READ_WRITE, oldLength, bytesSize.toLong())
+                        for (b in bytes) {
+                            writeBuffer.put(b)
+                        }
+                        newLength
+                    } else {
+                        writingFile.length()
                     }
                 } catch (e: Throwable) {
                     try {
-                        writer?.close()
+                        writingFile?.close()
                     } catch (_: Throwable) {}
                     try {
                         editor?.abort()
                     } catch (_: Throwable) {}
-                    this.writer = null
+                    this.lastWriteBuffer = null
+                    this.writingFile = null
                     this.editor = null
                     LibLog.e(TAG, "Write log fail: ${e.message}", e)
+                    0L
                 }
+            } else {
+                writingFile?.length() ?: 0L
             }
         }
     }
@@ -218,15 +239,20 @@ internal class AsyncLogWriter(
     private fun commitLogs() {
         synchronized(writeLock) {
             try {
-                this.writer?.close()
+                this.lastWriteBuffer?.force()
+                this.writingFile?.close()
                 this.editor?.commit()
             } catch (e: Throwable) {
                 try {
-                    this.editor?.abort()
+                    this.writingFile?.close()
+                } catch (_: Throwable) {}
+                try {
+                    this.editor?.abortUnlessCommitted()
                 } catch (_: Throwable) { }
                 LibLog.e(TAG, "Commit log fail: ${e.message}", e)
             } finally {
-                this.writer = null
+                this.lastWriteBuffer = null
+                this.writingFile = null
                 this.editor = null
             }
         }
@@ -242,6 +268,9 @@ internal class AsyncLogWriter(
 
         // 2s
         private const val TIMEOUT_COMMIT_LOG_INTERVAL = 2000L
+
+        // 128 KB
+        private const val FRAGMENT_TO_COMMIT_SIZE = 1024L * 128L
 
         private const val MAX_WAITING_QUEUE_SIZE = 2000
 
