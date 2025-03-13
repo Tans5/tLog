@@ -1,6 +1,7 @@
 package com.tans.tlog.demo
 
 import android.app.Application
+import com.tans.tlog.InitCallback
 import com.tans.tlog.tLog
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -11,6 +12,15 @@ object AppLog {
 
     fun init(application: Application) {
         val l = tLog.Companion.Builder(File(application.externalCacheDir, "AppLog"))
+            .setInitCallback(object : InitCallback {
+                override fun onSuccess() {
+                    d(TAG, "Init log success.")
+                }
+
+                override fun onFail(e: Throwable) {
+                    e(TAG, "Init fail: ${e.message}", e)
+                }
+            })
             .build()
         log.set(l)
     }
@@ -23,4 +33,5 @@ object AppLog {
         log.get()?.e(tag, msg, t)
     }
 
+    const val TAG = "AppLog"
 }

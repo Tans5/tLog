@@ -9,23 +9,24 @@ class MyApplication : Application() {
         AppLog.init(this)
 
         // DebugLog test thread.
-        Thread {
+        Thread({
+
             while (true) {
-                AppLog.d("DebugTestThread", "DebugTest: ${System.currentTimeMillis()}")
+                AppLog.d("DebugTest", "DebugTest: ${System.currentTimeMillis()}")
                 Thread.sleep(2000L)
             }
-        }.start()
+        }, "DebugTestThread").start()
 
         // Error test thread.
-        Thread {
+        Thread({
             while (true) {
                 try {
                     error("TestError")
                 } catch (e: Throwable) {
-                    AppLog.e("ErrorTestThread", "ErrorTest: ${System.currentTimeMillis()}", e)
+                    AppLog.e("ErrorTest", "ErrorTest: ${System.currentTimeMillis()}", e)
                 }
                 Thread.sleep(2000L)
             }
-        }.start()
+        }, "ErrorTestThread").start()
     }
 }

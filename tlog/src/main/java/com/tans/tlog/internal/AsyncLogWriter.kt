@@ -2,6 +2,7 @@ package com.tans.tlog.internal
 
 import android.os.Handler
 import android.os.Message
+import com.tans.tlog.InitCallback
 import com.tans.tlog.LogLevel
 import com.tans.tlrucache.disk.DiskLruCache
 import java.io.File
@@ -13,7 +14,8 @@ internal class AsyncLogWriter(
     private val baseDir: File,
     maxSize: Long?,
     private val logFilterLevel: LogLevel,
-    private val backgroundExecutor: Executor
+    private val backgroundExecutor: Executor,
+    private val initCallback: InitCallback?
 ) {
 
     private val maxSize: Long = maxSize ?: DEFAULT_MAX_SIZE
@@ -61,10 +63,12 @@ internal class AsyncLogWriter(
                 this.writerState = WriterState.InitSuccess
                 LibLog.d(TAG, "Init success.")
                 if (waitingWriteLogs.isNotEmpty()) {
-                    handler.sendEmptyMessage(WRITE_LOG_MSG)
+                    handler.sendEmptyMessageDelayed(WRITE_LOG_MSG, 10L)
                 }
+                initCallback?.onSuccess()
                 c
             } catch (e: Throwable) {
+                initCallback?.onFail(e)
                 this.writerState = WriterState.InitFail
                 LibLog.e(TAG, "Init fail: ${e.message}", e)
                 null
@@ -81,9 +85,11 @@ internal class AsyncLogWriter(
                     LibLog.w(TAG, "Drop log, because of waiting queue is full, queueSize=${waitingWriteLogs.size}, maxQueueSize=${MAX_WAITING_QUEUE_SIZE}")
                 } else {
                     val time = System.currentTimeMillis()
+                    val threadName = Thread.currentThread().name
                     backgroundExecutor.executeOnBgThread {
                         val ls = convertLogToString(
                             time = time,
+                            threadName = threadName,
                             logLevel = logLevel,
                             tag = tag,
                             msg = msg,
@@ -102,8 +108,57 @@ internal class AsyncLogWriter(
 
 
     fun flush() {
-        writeWaitingLogs()
-        commitLogs()
+        synchronized(writeLock) {
+            writeWaitingLogs()
+            commitLogs()
+        }
+    }
+
+    fun zipLogFile(outputFile: File, deleteLogs: Boolean): Boolean {
+        return synchronized(writeLock) {
+            if (writerState != WriterState.InitSuccess) {
+                return@synchronized false
+            }
+            flush()
+            val isSuccess = zipFile(
+                baseDir = baseDir,
+                outputFile = outputFile,
+                filter = { f -> f.isFile && f.name != "journal" }
+            )
+            if (isSuccess && deleteLogs) {
+                deleteAllLogs()
+            }
+            isSuccess
+        }
+    }
+
+    fun zipLogFile(deleteLogs: Boolean): ByteArray? {
+        return synchronized(writeLock) {
+            if (writerState != WriterState.InitSuccess) {
+                return@synchronized null
+            }
+            flush()
+            val result = zipFile(
+                baseDir = baseDir,
+                filter = { f -> f.isFile && f.name != "journal" }
+            )
+            if (result != null && deleteLogs) {
+                deleteAllLogs()
+            }
+            result
+        }
+    }
+
+    fun deleteAllLogs() {
+        synchronized(writeLock) {
+            flush()
+            val children = baseDir.listFiles() ?: emptyArray()
+            for (c in children) {
+                if (c.isFile && c.name != "journal") {
+                    c.delete()
+                }
+            }
+        }
     }
 
     private var editor: DiskLruCache.Editor? = null
