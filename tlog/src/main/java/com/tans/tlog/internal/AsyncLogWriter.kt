@@ -129,7 +129,7 @@ internal class AsyncLogWriter(
                 return@synchronized false
             }
             flush()
-            val isSuccess = zipFile(
+            val isSuccess = zipDir(
                 baseDir = baseDir,
                 outputFile = outputFile,
                 filter = { f -> f.isFile && f.name != "journal" }
@@ -147,7 +147,7 @@ internal class AsyncLogWriter(
                 return@synchronized null
             }
             flush()
-            val result = zipFile(
+            val result = zipDir(
                 baseDir = baseDir,
                 filter = { f -> f.isFile && f.name != "journal" }
             )

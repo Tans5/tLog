@@ -8,7 +8,33 @@ import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-internal fun zipFile(inputFiles: List<File>, outputStream: OutputStream) {
+internal fun zipFiles(inputFiles: List<File>, outputFile: File): Boolean {
+    return try {
+        if (outputFile.exists()) {
+            outputFile.delete()
+        }
+        outputFile.createNewFile()
+        outputFile.outputStream().use { zipFiles(inputFiles = inputFiles, outputStream = it) }
+        true
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        false
+    }
+}
+
+internal fun zipFiles(inputFiles: List<File>): ByteArray? {
+    return try {
+        ByteArrayOutputStream().use {
+            zipFiles(inputFiles = inputFiles, outputStream = it)
+            it.toByteArray()
+        }
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        null
+    }
+}
+
+internal fun zipFiles(inputFiles: List<File>, outputStream: OutputStream) {
     val fixedInputFiles = inputFiles.filter { it.isFile && it.exists() }.map { it.canonicalPath }
     var entryNameCutIndex = 0
     if (fixedInputFiles.isNotEmpty()) {
@@ -45,14 +71,14 @@ internal fun zipFile(inputFiles: List<File>, outputStream: OutputStream) {
     }
 }
 
-internal fun zipFile(baseDir: File, outputFile: File, filter: (f: File) -> Boolean = { true }): Boolean {
+internal fun zipDir(baseDir: File, outputFile: File, filter: (f: File) -> Boolean = { true }): Boolean {
     return try {
         if (outputFile.exists()) {
             outputFile.delete()
         }
         outputFile.createNewFile()
         outputFile.outputStream().use {
-            zipFile(baseDir = baseDir, outputStream = it, filter = filter)
+            zipDir(baseDir = baseDir, outputStream = it, filter = filter)
         }
         true
     } catch (e: Throwable) {
@@ -61,10 +87,10 @@ internal fun zipFile(baseDir: File, outputFile: File, filter: (f: File) -> Boole
     }
 }
 
-internal fun zipFile(baseDir: File, filter: (f: File) -> Boolean = { true }): ByteArray? {
+internal fun zipDir(baseDir: File, filter: (f: File) -> Boolean = { true }): ByteArray? {
     return try {
         ByteArrayOutputStream().use {
-            zipFile(baseDir = baseDir, outputStream = it, filter = filter)
+            zipDir(baseDir = baseDir, outputStream = it, filter = filter)
             it.toByteArray()
         }
     } catch (e: Throwable) {
@@ -73,7 +99,7 @@ internal fun zipFile(baseDir: File, filter: (f: File) -> Boolean = { true }): By
     }
 }
 
-internal fun zipFile(baseDir: File, outputStream: OutputStream, filter: (f: File) -> Boolean = { true }) {
+internal fun zipDir(baseDir: File, outputStream: OutputStream, filter: (f: File) -> Boolean = { true }) {
     val baseDirString = baseDir.canonicalPath
     fun writeZipFile(dir: File, zos: ZipOutputStream) {
         val children = (dir.listFiles() ?: emptyArray()).filter { filter(it) && it.canRead() }
