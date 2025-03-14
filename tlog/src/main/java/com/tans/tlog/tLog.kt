@@ -25,7 +25,7 @@ class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
         asyncLogWriter.writeLog(logLevel = LogLevel.Waring, tag = tag, msg = msg)
     }
 
-    fun e(tag: String, msg: String, t: Throwable?) {
+    fun e(tag: String, msg: String, t: Throwable? = null) {
         Log.e(tag, msg, t)
         asyncLogWriter.writeLog(logLevel = LogLevel.Error, tag = tag, msg = msg, throwable = t)
     }
