@@ -42,9 +42,17 @@ private const val LOG_HEADER_LEN = DATE_TIME_LEN + PID_TID_LEN + TAG_LEN + THREA
 private const val LOG_HEADER_FORMAT = "%-${DATE_TIME_LEN}s %-${PID_TID_LEN}s %-${TAG_LEN}s %-${THREAD_NAME_LEN}s %-${LOG_LEVEL_LEN}s "
 private const val LOG_MSG_FORMAT = "%-${LOG_HEADER_LEN}s%s"
 
-internal fun convertLogToString(time: Long, threadName: String, logLevel: LogLevel, tag: String, msg: String, throwable: Throwable? = null): String {
+internal fun convertLogToString(
+    time: Long,
+    threadName: String,
+    tid: Int,
+    logLevel: LogLevel,
+    tag: String,
+    msg: String,
+    throwable: Throwable? = null
+): String {
     val dataTimeString = sdfDateTimeMs.format(time)
-    val pidAndTid = "${Process.myPid()}-${Process.myTid()}".fixStringLen(PID_TID_LEN)
+    val pidAndTid = "${Process.myPid()}-$tid".fixStringLen(PID_TID_LEN)
     val fixedTag = tag.fixStringLen(TAG_LEN)
     val threadNameFixed = threadName.fixStringLen(THREAD_NAME_LEN)
     val logLevelString = when (logLevel) {

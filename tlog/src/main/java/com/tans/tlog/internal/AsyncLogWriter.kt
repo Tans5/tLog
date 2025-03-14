@@ -2,6 +2,7 @@ package com.tans.tlog.internal
 
 import android.os.Handler
 import android.os.Message
+import android.os.Process
 import com.tans.tlog.InitCallback
 import com.tans.tlog.LogLevel
 import com.tans.tlog.LogToBytesConverter
@@ -77,9 +78,9 @@ internal class AsyncLogWriter(
                 initCallback?.onSuccess()
                 c
             } catch (e: Throwable) {
-                initCallback?.onFail(e)
                 this.writerState = WriterState.InitFail
                 LibLog.e(TAG, "Init fail: ${e.message}", e)
+                initCallback?.onFail(e)
                 null
             }
         }
@@ -95,10 +96,12 @@ internal class AsyncLogWriter(
                 } else {
                     val time = System.currentTimeMillis()
                     val threadName = Thread.currentThread().name
+                    val tid = Process.myTid()
                     backgroundExecutor.executeOnBgThread {
                         val ls = convertLogToString(
                             time = time,
                             threadName = threadName,
+                            tid = tid,
                             logLevel = logLevel,
                             tag = tag,
                             msg = msg,
@@ -185,7 +188,7 @@ internal class AsyncLogWriter(
                 try {
                     if (editor == null || writingFile == null) {
                         writingFile?.close()
-                        editor?.commit()
+                        editor?.abortUnlessCommitted()
 
                         val key = getCacheKey()
                         editor = diskLruCache.edit(key) ?: error("Can't get editor for key: $key")
@@ -217,6 +220,7 @@ internal class AsyncLogWriter(
                         for (b in bytes) {
                             writeBuffer.put(b)
                         }
+                        this.lastWriteBuffer = writeBuffer
                         newLength
                     } else {
                         writingFile.length()
