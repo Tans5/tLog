@@ -10,23 +10,39 @@ import java.util.concurrent.ConcurrentHashMap
 @Suppress("ClassName")
 class tLog private constructor(private val asyncLogWriter: AsyncLogWriter) {
 
-    fun d(tag: String, msg: String) {
-        Log.d(tag, msg)
-        asyncLogWriter.writeLog(logLevel = LogLevel.Debug, tag = tag, msg = msg)
+    fun d(tag: String, msg: String, t: Throwable? = null) {
+        if (t != null) {
+            Log.d(tag, msg, t)
+        } else {
+            Log.d(tag, msg)
+        }
+        asyncLogWriter.writeLog(logLevel = LogLevel.Debug, tag = tag, msg = msg, throwable = t)
     }
 
-    fun i(tag: String, msg: String) {
-        Log.i(tag, msg)
-        asyncLogWriter.writeLog(logLevel = LogLevel.Info, tag = tag, msg = msg)
+    fun i(tag: String, msg: String, t: Throwable? = null) {
+        if (t != null) {
+            Log.i(tag, msg, t)
+        } else {
+            Log.i(tag, msg)
+        }
+        asyncLogWriter.writeLog(logLevel = LogLevel.Info, tag = tag, msg = msg, throwable = t)
     }
 
-    fun w(tag: String, msg: String) {
-        Log.w(tag, msg)
+    fun w(tag: String, msg: String, t: Throwable? = null) {
+        if (t != null) {
+            Log.w(tag, msg, t)
+        } else {
+            Log.w(tag, msg)
+        }
         asyncLogWriter.writeLog(logLevel = LogLevel.Waring, tag = tag, msg = msg)
     }
 
     fun e(tag: String, msg: String, t: Throwable? = null) {
-        Log.e(tag, msg, t)
+        if (t != null) {
+            Log.e(tag, msg, t)
+        } else {
+            Log.e(tag, msg)
+        }
         asyncLogWriter.writeLog(logLevel = LogLevel.Error, tag = tag, msg = msg, throwable = t)
     }
 

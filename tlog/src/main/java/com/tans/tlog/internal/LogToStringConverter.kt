@@ -71,13 +71,11 @@ internal fun convertLogToString(
     )
     val result = StringBuilder(header)
     val msgLines = msg.lines()
+    result.appendLine(msgLines.getOrNull(0))
     if (msgLines.size > 1) {
-        result.append(msgLines.getOrNull(0))
-        for (i in 1 until  msgLines.size) {
+        for (i in 1 until msgLines.size) {
             result.appendLine(String.format(Locale.US, LOG_MSG_FORMAT, "", msgLines[i]))
         }
-    } else {
-        result.appendLine(msgLines.getOrNull(0))
     }
     if (throwable != null) {
         val errorLines = throwable.convertToStrings()
